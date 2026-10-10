@@ -28,7 +28,7 @@ const { isLoggedIn } = require("./middleware.js");
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin:["https://zerodha-frontend-n9tb.onrender.com", "https://zerodha-dashboard-n7l0.onrender.com"],
     credentials: true,
   }),
 );
@@ -61,21 +61,18 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 app.get("/holdings", isLoggedIn, async (req, res) => {
-  try{
-  let allHoldings = await HoldingModel.find({owner:req.user._id});
-  res.json(allHoldings);
-  }
-  catch(err){
+  try {
+    let allHoldings = await HoldingModel.find({ owner: req.user._id });
+    res.json(allHoldings);
+  } catch (err) {
     console.log(err.message);
   }
 });
 
-app.get("/positions", isLoggedIn,async (req, res) => {
+app.get("/positions", isLoggedIn, async (req, res) => {
   let allPositions = await PositionModel.find({});
   res.json(allPositions);
 });
-
-
 
 app.post("/newBuyOrder", isLoggedIn, async (req, res) => {
   const name = req.body.name;
@@ -94,7 +91,7 @@ app.post("/newBuyOrder", isLoggedIn, async (req, res) => {
   ) {
     return res.status(400).json({
       success: false,
-      message: "Invalid order data"
+      message: "Invalid order data",
     });
   }
 
@@ -102,73 +99,71 @@ app.post("/newBuyOrder", isLoggedIn, async (req, res) => {
 
   try {
     await session.withTransaction(async () => {
-
       // 2. Find logged-in user's holding
       const holding = await HoldingModel.findOne({
         owner,
-        name
+        name,
       }).session(session);
 
       if (holding) {
         // 3. Update existing holding
         const totalQty = holding.qty + qty;
 
-        holding.avg =
-          (holding.avg * holding.qty + price * qty) / totalQty;
+        holding.avg = (holding.avg * holding.qty + price * qty) / totalQty;
 
         holding.qty = totalQty;
         holding.price = price;
 
         await holding.save({ session });
-
       } else {
         // 4. Create new holding
         await HoldingModel.create(
-          [{
-            owner,
-            name,
-            qty,
-            avg: price,
-            price,
-            net: "0%",
-            day: "0%"
-          }],
-          { session }
+          [
+            {
+              owner,
+              name,
+              qty,
+              avg: price,
+              price,
+              net: "0%",
+              day: "0%",
+            },
+          ],
+          { session },
         );
       }
 
       // 5. Create order in the same transaction
       await OrderModel.create(
-        [{
-          owner,
-          name,
-          qty,
-          price,
-          mode: "BUY"
-        }],
-        { session }
+        [
+          {
+            owner,
+            name,
+            qty,
+            price,
+            mode: "BUY",
+          },
+        ],
+        { session },
       );
     });
 
     // 6. Send success only after transaction commits
     return res.status(201).json({
       success: true,
-      message: "Buy order placed and holding updated"
+      message: "Buy order placed and holding updated",
     });
-
   } catch (error) {
     console.error("Buy order error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to process buy order"
+      message: "Unable to process buy order",
     });
-
   } finally {
     await session.endSession();
   }
 });
-
 
 app.post("/newSellOrder", isLoggedIn, async (req, res) => {
   const qty = Number(req.body.qty);
@@ -185,7 +180,7 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
     price <= 0
   ) {
     return res.status(400).json({
-      message: "Invalid sell order data"
+      message: "Invalid sell order data",
     });
   }
 
@@ -198,21 +193,21 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
         {
           owner,
           name,
-          qty: { $gte: qty }
+          qty: { $gte: qty },
         },
         {
-          $inc: { qty: -qty }
+          $inc: { qty: -qty },
         },
         {
           new: true,
-          session
-        }
+          session,
+        },
       );
 
       if (!holding) {
         const exists = await HoldingModel.exists({
           owner,
-          name
+          name,
         }).session(session);
 
         if (!exists) {
@@ -221,38 +216,41 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
           throw error;
         }
 
-        const error = new Error(
-          "Insufficient quantity available to sell"
-        );
+        const error = new Error("Insufficient quantity available to sell");
         error.statusCode = 400;
         throw error;
       }
 
       // Delete holding if all shares have been sold
       if (holding.qty === 0) {
-        await HoldingModel.deleteOne({
-          _id: holding._id,
-          owner,
-          qty: 0
-        }, { session });
+        await HoldingModel.deleteOne(
+          {
+            _id: holding._id,
+            owner,
+            qty: 0,
+          },
+          { session },
+        );
       }
 
       // Save the sell order in the same transaction
       await OrderModel.create(
-        [{
-          owner,
-          name,
-          qty,
-          price,
-          mode: "SELL"
-        }],
-        { session }
+        [
+          {
+            owner,
+            name,
+            qty,
+            price,
+            mode: "SELL",
+          },
+        ],
+        { session },
       );
     });
 
     return res.status(200).json({
       success: true,
-      message: "Sell order successfully placed"
+      message: "Sell order successfully placed",
     });
   } catch (error) {
     console.error("Sell order error:", error.message);
@@ -261,7 +259,7 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
       success: false,
       message: error.statusCode
         ? error.message
-        : "Unable to process sell order"
+        : "Unable to process sell order",
     });
   } finally {
     await session.endSession();
@@ -269,11 +267,10 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
 });
 
 app.get("/orders", isLoggedIn, async (req, res) => {
-  try{
-  let orders = await OrderModel.find({owner:req.user._id});
-  res.json(orders);
-  }
-  catch(err){
+  try {
+    let orders = await OrderModel.find({ owner: req.user._id });
+    res.json(orders);
+  } catch (err) {
     console.log(err.message);
   }
 });
@@ -327,17 +324,16 @@ app.post("/login", (req, res, next) => {
   })(req, res, next);
 });
 
-
-app.get("/signout", async(req,res,next)=>{
-    req.logout((err) => {
-      if(err){
-        return next(err);
-      }
-      res.status(200).json({
-        success:true,
-        message:"You logged out successfully"
-      })
-    })
+app.get("/signout", async (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.status(200).json({
+      success: true,
+      message: "You logged out successfully",
+    });
+  });
 });
 
 app.get("/checkAuthentication", (req, res) => {
@@ -356,13 +352,12 @@ app.get("/checkAuthentication", (req, res) => {
   });
 });
 
-
-app.get("/getuser",(req,res) => {
-    if(req.user){
-      res.json({
-        user:req.user
-      })
-    }
+app.get("/getuser", (req, res) => {
+  if (req.user) {
+    res.json({
+      user: req.user,
+    });
+  }
 });
 
 app.use((err, req, res, next) => {
