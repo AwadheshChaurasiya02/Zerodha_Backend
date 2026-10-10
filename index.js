@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/User.js");
-const { isLoggedIn } = require("./middleware.js");
+
 
 app.use(
   cors({
@@ -62,7 +62,7 @@ passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-app.get("/holdings", isLoggedIn, async (req, res) => {
+app.get("/holdings", async (req, res) => {
   try {
     let allHoldings = await HoldingModel.find({ owner: req.user._id });
     res.json(allHoldings);
@@ -71,12 +71,12 @@ app.get("/holdings", isLoggedIn, async (req, res) => {
   }
 });
 
-app.get("/positions", isLoggedIn, async (req, res) => {
+app.get("/positions", async (req, res) => {
   let allPositions = await PositionModel.find({});
   res.json(allPositions);
 });
 
-app.post("/newBuyOrder", isLoggedIn, async (req, res) => {
+app.post("/newBuyOrder", async (req, res) => {
   const name = req.body.name;
   const qty = Number(req.body.qty);
   const price = Number(req.body.price);
@@ -167,7 +167,7 @@ app.post("/newBuyOrder", isLoggedIn, async (req, res) => {
   }
 });
 
-app.post("/newSellOrder", isLoggedIn, async (req, res) => {
+app.post("/newSellOrder", async (req, res) => {
   const qty = Number(req.body.qty);
   const price = Number(req.body.price);
   const name = req.body.name;
@@ -268,7 +268,7 @@ app.post("/newSellOrder", isLoggedIn, async (req, res) => {
   }
 });
 
-app.get("/orders", isLoggedIn, async (req, res) => {
+app.get("/orders", async (req, res) => {
   try {
     let orders = await OrderModel.find({ owner: req.user._id });
     res.json(orders);
