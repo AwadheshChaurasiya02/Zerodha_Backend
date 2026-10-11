@@ -329,14 +329,30 @@ app.post("/login", (req, res, next) => {
   })(req, res, next);
 });
 
-app.get("/signout", async (req, res, next) => {
+app.get("/signout", (req, res, next) => {
   req.logout((err) => {
     if (err) {
       return next(err);
     }
-    res.status(200).json({
-      success: true,
-      message: "You logged out successfully",
+
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Logout failed",
+        });
+      }
+
+      res.clearCookie("connect.sid", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "You logged out successfully",
+      });
     });
   });
 });
