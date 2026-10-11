@@ -41,22 +41,25 @@ const store = MongoStore.create({
   touchAfter: 24 * 3600,
 });
 
+app.set("trust proxy", 1);
+
 const sessionOption = {
   store,
   secret: "awadh",
   resave: false,
   saveUninitialized: false,
   cookie: {
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
-}
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  },
 };
 
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
+
 passport.use(new LocalStrategy(User.authenticate()));
 
 passport.serializeUser(User.serializeUser());
